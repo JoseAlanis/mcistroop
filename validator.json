@@ -1,0 +1,15 @@
+{
+    "source_data_path": {
+        "path": "../data_bids/sourcedata",
+        "naming": "OK",
+        "dirs_in_sourcedata": 53
+    },
+    "subject_directories": {
+        "name_pattern": "sub-\\d+",
+        "naming": "OK"
+    },
+    "data_files": {
+        "file_pattern": "sub-\\d+_\\w+_eeg.*",
+        "naming": "OK"
+    }
+}
