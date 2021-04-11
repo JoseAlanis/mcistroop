@@ -45,7 +45,7 @@ def plot_z_scores(z_scores, channels, bads=None, cmap='inferno', show=False):
                 fontweight='bold', fontsize=9,
                 ha='center', va='center', rotation=45)
     ax.set_ylim(0, y_lim)
-    ax.set_xlim(-1, 64)
+    ax.set_xlim(-1, len(channels))
 
     plt.title('EEG channel deviation', {'fontsize': 15, 'fontweight': 'bold'})
     plt.xlabel('Channels', {'fontsize': 13}, labelpad=10)

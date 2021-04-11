@@ -14,8 +14,10 @@ import os
 import numpy as np
 import pandas as pd
 
-from mne import add_reference_channels, Annotations, open_report
-from mne.io import read_raw_brainvision
+import matplotlib.pyplot as plt
+
+from mne import Annotations, open_report, create_info
+from mne.io import read_raw_brainvision, RawArray
 
 # All parameters are defined in config.py
 from config import fname, parser, LoggingFormat, n_jobs, montage, max_peak
@@ -30,7 +32,7 @@ task = args.task
 
 print(LoggingFormat.PURPLE +
       LoggingFormat.BOLD +
-      'Initialise bad channel detection for subject %s' % subject +
+      'Bad channel detection for subject %s (%s)' % (subject, task) +
       LoggingFormat.END)
 
 ##############################################################################
@@ -254,9 +256,37 @@ plot_artefacts = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
                           n_channels=len(raw.info['ch_names']),
                           title='Robust reference applied Sub-%s' % subject,
                           show=False)
+plt.close('all')
 
 ##############################################################################
-# 8) Export data to .fif for further processing
+# 8) Add the computed robust average reference to the data
+raw.apply_proj()
+
+###############################################################################
+# 9) Create and interpolation missing channels
+
+# place holder structure
+custom_info = create_info(ch_names=['FCz', 'Cz'],
+                          ch_types=['eeg', 'eeg'],
+                          sfreq=raw.info['sfreq'])
+
+custom_data = np.zeros((len(custom_info['ch_names']),
+                        raw.get_data().shape[1]))
+
+custom_raw = RawArray(custom_data, custom_info, raw.first_samp)
+custom_raw.info['highpass'] = raw.info['highpass']
+custom_raw.info['lowpass'] = raw.info['lowpass']
+
+# add newly created channels to original raw
+raw.add_channels([custom_raw])
+raw.set_montage(montage=montage)
+
+# interpolate the added channels using original data
+raw.info['bads'] = ['FCz', 'Cz']
+raw.interpolate_bads(mode='accurate')
+
+##############################################################################
+# 10) Export data to .fif for further processing
 # output path
 output_path = fname.output(subject=subject,
                            task=task,
@@ -267,7 +297,7 @@ output_path = fname.output(subject=subject,
 raw.save(output_path, overwrite=True)
 
 # cretae fisrt report
-with open_report(fname.report(subject=subject)[0]) as report:
+with open_report(fname.report(subject=subject, task=task)[0]) as report:
     report.parse_folder(os.path.dirname(output_path),
                         pattern=os.path.basename(output_path),
                         render_bem=False)
@@ -278,5 +308,5 @@ with open_report(fname.report(subject=subject)[0]) as report:
                                'Artefacts',
                                section='Raw data',
                                replace=True)
-    report.save(fname.report(subject=subject)[1], overwrite=True,
+    report.save(fname.report(subject=subject, task=task)[1], overwrite=True,
                 open_browser=False)

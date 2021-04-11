@@ -30,7 +30,7 @@ task = args.task
 
 print(LoggingFormat.PURPLE +
       LoggingFormat.BOLD +
-      'Finding and removing bad components for subject %s' % subject +
+      'Removing bad components for subject %s (%s)' % (subject, task) +
       LoggingFormat.END)
 
 ###############################################################################
@@ -57,26 +57,26 @@ ica = read_ica(ica_file)
 
 ###############################################################################
 # 3) Find bad components via correlation with template ICA
-temp_subjs = [22]
+temp_subjs = [16]
 temp_raws = []
 temp_icas = []
 
 # import template subjects
 for subj in temp_subjs:
     temp_raws.append(read_raw_fif(fname.output(subject=subj,
-                                               task=task,
+                                               task='congruentstroop',
                                                processing_step='repairbads',
                                                file_type='raw.fif')))
     temp_icas.append(read_ica(fname.output(subject=subj,
-                                           task=task,
+                                           task='congruentstroop',
                                            processing_step='fitica',
                                            file_type='ica.fif')))
 
 # compute correlations with template ocular movements up/down and left/right
 corrmap(icas=[temp_icas[0], ica],
-        template=(0, 0), threshold=0.85, label='blink_up', plot=False)
+        template=(0, 0), threshold=0.90, label='blink_up', plot=False)
 corrmap(icas=[temp_icas[0], ica],
-        template=(0, 3), threshold=0.85, label='blink_side', plot=False)
+        template=(0, 1), threshold=0.90, label='blink_side', plot=False)
 # corrmap(icas=[temp_icas[1], ica],
 #         template=(0, 2), threshold=0.80, label='blink_weird', plot=False)
 
@@ -110,10 +110,10 @@ for bad_comp in np.unique(bad_components):
 
     # show how the signal is affected by component rejection
     fig_evoked = ica.plot_overlay(a_evo, exclude=[bad_comp], show=False)
-    plt.close(fig_evoked)
+    plt.close('all')
 
     # create HTML report
-    with open_report(fname.report(subject=subject)[0]) as report:
+    with open_report(fname.report(subject=subject, task=task)[0]) as report:
         report.add_figs_to_section(fig_comp, 'Component %s identified ' 
                                              'by correlation with template'
                                    % bad_comp,
@@ -123,7 +123,7 @@ for bad_comp in np.unique(bad_components):
                                    % bad_comp,
                                    section='ICA',
                                    replace=True)
-        report.save(fname.report(subject=subject)[1], overwrite=True,
+        report.save(fname.report(subject=subject, task=task)[1], overwrite=True,
                     open_browser=False)
 
 # add bad components  to exclusion list

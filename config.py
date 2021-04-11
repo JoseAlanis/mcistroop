@@ -145,9 +145,9 @@ fname.add('output', output_file)
 
 
 # The paths that are produced by the report step
-def report_path(path, subject):
-    h5_path = op.join(path.reports_dir, 'sub-%03d.h5' % subject)
-    html_path = op.join(path.reports_dir, 'sub-%03d-report.html' % subject)
+def report_path(path, subject, task):
+    h5_path = op.join(path.reports_dir, 'sub-%03d-%s.h5' % (subject, task))
+    html_path = op.join(path.reports_dir, 'sub-%03d-%s-report.html' % (subject, task))  # noqa
     return h5_path, html_path
 
 

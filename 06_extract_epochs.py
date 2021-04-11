@@ -10,12 +10,11 @@ Authors: José C. García Alanis <alanis.jcg@gmail.com>
 License: BSD (3-clause)
 """
 import os
-from os import path as op
 
 import pandas as pd
 import numpy as np
 
-from mne import events_from_annotations, Epochs, open_report
+from mne import events_from_annotations, Epochs
 from mne.io import read_raw_fif
 
 # All parameters are defined in config.py
@@ -29,7 +28,7 @@ task = args.task
 
 print(LoggingFormat.PURPLE +
       LoggingFormat.BOLD +
-      'Extracting epochs for subject %s' % subject +
+      'Extracting epochs for subject %s (%s)' % (subject, task) +
       LoggingFormat.END)
 
 ###############################################################################
@@ -51,15 +50,48 @@ raw.pick_types(eeg=True)
 
 ###############################################################################
 # 2) Get events from continuous EEG data
+ev_id = None
+if task in {'congruentstroop', 'incogruentstroop'}:
+    # create a dictionary with event IDs for standardised handling
+    ev_id = {'Stimulus/S 12': 100,
 
-# create a dictionary with event IDs for standardised handling
-ev_id = {'Stimulus/S  8': 1,
-         'Stimulus/S  9': 2,
-         'Stimulus/S 10': 3,
-         'Stimulus/S 11': 4}
+             'Stimulus/S  8': 1,
+             'Stimulus/S  9': 2,
+             'Stimulus/S 10': 3,
+             'Stimulus/S 11': 4,
+
+             'Stimulus/S  2': 5,
+             'Stimulus/S  3': 6,
+             'Stimulus/S  4': 7,
+             'Stimulus/S  5': 8,
+             }
+elif task == {'mixedstroop'}:
+    # create a dictionary with event IDs for standardised handling
+    ev_id = {'Stimulus/S 16': 100,
+
+             'Stimulus/S  8': 1,
+             'Stimulus/S  9': 101,
+
+             'Stimulus/S 10': 2,
+             'Stimulus/S 11': 102,
+
+             'Stimulus/S 12': 3,
+             'Stimulus/S 13': 103,
+
+             'Stimulus/S 14': 4,
+             'Stimulus/S 15': 104,
+
+             'Stimulus/S  2': 5,
+             'Stimulus/S  3': 6,
+             'Stimulus/S  4': 7,
+             'Stimulus/S  5': 8,
+             }
+
 
 # extract events
 events = events_from_annotations(raw, event_id=ev_id, regexp=None)
+
+# events[0][events[0][:, 2] == 100].shape
 
 ###############################################################################
 # 3) Recode events into respective conditions and add information about valid
@@ -68,274 +100,264 @@ events = events_from_annotations(raw, event_id=ev_id, regexp=None)
 # copy of events
 new_evs = events[0].copy()
 
-# # global variables
-# trial = 0
-# broken = []
-# sfreq = raw.info['sfreq']
-# block_end = events[0][events[0][:, 2] == 17, 0] / sfreq
-# # place holders for results
-# block = []
-# probe_ids = []
-# reaction = []
-# rt = []
-#
-# # loop trough events and recode them
-# for event in range(len(new_evs[:, 2])):
-#     # --- if event is a cue stimulus ---
-#     if new_evs[event, 2] in {5, 6, 7, 8, 9, 10}:
-#
-#         # save block based on onset (before or after break)
-#         if (new_evs[event, 0] / sfreq) < block_end:
-#             block.append(0)
-#         else:
-#             block.append(1)
-#
-#         # --- 1st check: if next event is a false reaction ---
-#         if new_evs[event + 1, 2] in {1, 2}:
-#             # if event is an A-cue
-#             if new_evs[event, 2] == 5:
-#                 # recode as too soon A-cue
-#                 new_evs[event, 2] = 18
-#             # if event is a B-cue
-#             elif new_evs[event, 2] in {6, 7, 8, 9, 10}:
-#                 # recode as too soon B-cue
-#                 new_evs[event, 2] = 19
-#
-#             # look for next probe
-#             i = 2
-#             while new_evs[event + i, 2] not in {11, 12, 13, 14, 15, 16}:
-#                 if new_evs[event + i, 2] in {5, 6, 7, 8, 9, 10}:
-#                     broken.append(trial)
-#                     break
-#                 i += 1
-#
-#             # if probe is an X
-#             if new_evs[event + i, 2] == 11:
-#                 # recode as too soon X-probe
-#                 new_evs[event + i, 2] = 20
-#             # if probe is an Y
-#             elif new_evs[event + i, 2] in {12, 13, 14, 15, 16}:
-#                 # recode as too soon Y-probe
-#                 new_evs[event + i, 2] = 21
-#
-#             # save trial information as NaN
-#             trial += 1
-#             rt.append(np.nan)
-#             reaction.append(np.nan)
-#             # go on to next trial
-#             continue
-#
-#         # --- 2nd check: if next event is a probe stimulus ---
-#         elif new_evs[event + 1, 2] in {11, 12, 13, 14, 15, 16}:
-#
-#             # if event after probe is a reaction
-#             if new_evs[event + 2, 2] in {1, 2, 3, 4}:
-#
-#                 # save reaction time
-#                 rt.append(
-#                     (new_evs[event + 2, 0] - new_evs[event + 1, 0]) / sfreq)
-#
-#                 # if reaction is correct
-#                 if new_evs[event + 2, 2] in {3, 4}:
-#
-#                     # save response
-#                     reaction.append(1)
-#
-#                     # if cue was an A
-#                     if new_evs[event, 2] == 5:
-#                         # recode as correct A-cue
-#                         new_evs[event, 2] = 22
-#
-#                         # if probe was an X
-#                         if new_evs[event + 1, 2] == 11:
-#                             # recode as correct AX probe combination
-#                             new_evs[event + 1, 2] = 23
-#
-#                         # if probe was a Y
-#                         else:
-#                             # recode as correct AY probe combination
-#                             new_evs[event + 1, 2] = 24
-#
-#                         # go on to next trial
-#                         trial += 1
-#                         continue
-#
-#                     # if cue was a B
-#                     else:
-#                         # recode as correct B-cue
-#                         new_evs[event, 2] = 25
-#
-#                         # if probe was an X
-#                         if new_evs[event + 1, 2] == 11:
-#                             # recode as correct BX probe combination
-#                             new_evs[event + 1, 2] = 26
-#                         # if probe was a Y
-#                         else:
-#                             # recode as correct BY probe combination
-#                             new_evs[event + 1, 2] = 27
-#
-#                         # go on to next trial
-#                         trial += 1
-#                         continue
-#
-#                 # if reaction was incorrect
-#                 else:
-#
-#                     # save response
-#                     reaction.append(0)
-#
-#                     # if cue was an A
-#                     if new_evs[event, 2] == 5:
-#                         # recode as incorrect A-cue
-#                         new_evs[event, 2] = 28
-#
-#                         # if probe was an X
-#                         if new_evs[event + 1, 2] == 11:
-#                             # recode as incorrect AX probe combination
-#                             new_evs[event + 1, 2] = 29
-#
-#                         # if probe was a Y
-#                         else:
-#                             # recode as incorrect AY probe combination
-#                             new_evs[event + 1, 2] = 30
-#
-#                         # go on to next trial
-#                         trial += 1
-#                         continue
-#
-#                     # if cue was a B
-#                     else:
-#                         # recode as incorrect B-cue
-#                         new_evs[event, 2] = 31
-#
-#                         # if probe was an X
-#                         if new_evs[event + 1, 2] == 11:
-#                             # recode as incorrect BX probe combination
-#                             new_evs[event + 1, 2] = 32
-#
-#                         # if probe was a Y
-#                         else:
-#                             # recode as incorrect BY probe combination
-#                             new_evs[event + 1, 2] = 33
-#
-#                         # go on to next trial
-#                         trial += 1
-#                         continue
-#
-#             # if no reaction followed cue-probe combination
-#             elif new_evs[event + 2, 2] not in {1, 2, 3, 4}:
-#
-#                 # save reaction time as NaN
-#                 rt.append(99999)
-#                 reaction.append(np.nan)
-#
-#                 # if cue was an A
-#                 if new_evs[event, 2] == 5:
-#                     # recode as missed A-cue
-#                     new_evs[event, 2] = 34
-#
-#                     # if probe was an X
-#                     if new_evs[event + 1, 2] == 11:
-#                         # recode as missed AX probe combination
-#                         new_evs[event + 1, 2] = 35
-#
-#                     # if probe was a Y
-#                     else:
-#                         # recode as missed AY probe combination
-#                         new_evs[event + 1, 2] = 36
-#
-#                     # go on to next trial
-#                     trial += 1
-#                     continue
-#
-#                 # if cue was a B
-#                 else:
-#                     # recode as missed B-cue
-#                     new_evs[event, 2] = 37
-#
-#                     # if probe was an X
-#                     if new_evs[event + 1, 2] == 11:
-#                         # recode as missed BX probe combination
-#                         new_evs[event + 1, 2] = 38
-#
-#                     # if probe was a Y
-#                     else:
-#                         # recode as missed BY probe combination
-#                         new_evs[event + 1, 2] = 39
-#
-#                     # go on to next trial
-#                     trial += 1
-#                     continue
-#
-#     # skip other events
-#     else:
-#         continue
+# global variables
+sfreq = raw.info['sfreq']
+block_end = events[0][events[0][:, 2] == 17, 0] / sfreq
+
+# trial counter
+fix = 0
+trial = 0
+color = []
+condition = []
+valid_trial = True
+invalid_trials = []
+good_trials = []
+miss = []
+
+
+# place holders for results
+block = []
+reaction = []
+rt = []
+
+# loop trough events and recode them
+for event in range(len(new_evs[:, 2])):
+
+    # # save block based on onset (before or after break)
+    # if (new_evs[event, 0] / sfreq) < block_end:
+    #     block.append(0)
+    # else:
+    #     block.append(1)
+
+    # - if event is a fix cross -
+    if new_evs[event, 2] == 100:
+        # -- if fix cross was followed by word stimulus --
+        if new_evs[event + 1, 2] in {1, 2, 3, 4, 101, 102, 103, 104}:
+            # change stimulus id to mark the beginning of a valid trial,
+            # store stimulus id
+            new_evs[event, 2] = 200
+            valid_trial = True
+        else:
+            # change stimulus id to mark the beginning of an invalid trial,
+            # (e.g., subject pressed the button too soon), store stimulus id
+            new_evs[event, 2] = 300
+            valid_trial = False
+            invalid_trials.append(fix)
+
+        # proceed to next stimulus
+        fix += 1
+        continue
+
+    # - if event is a word stimulus -
+    elif new_evs[event, 2] in {1, 2, 3, 4, 101, 102, 103, 104}:
+
+        # -- if event is the last one --
+        if new_evs[event, 0] == new_evs[-1, 0]:
+            # skip as no reaction was provided
+            new_evs[event, 2] = 99
+            # add event as missed reaction
+            miss.append(trial)
+            reaction.append(np.nan)
+            rt.append(np.nan)
+            trial += 1
+
+            if task == 'congruentstroop':
+                condition.append('congruent')
+            elif task == 'incongruentstroop':
+                condition.append('incongruent')
+            elif task == 'mixedstroop':
+                if new_evs[event, 2] in {1, 2, 3, 4}:
+                    condition.append('congruent')
+                elif new_evs[event, 2] in {101, 102, 103, 104}:
+                    condition.append('incongruent')
+
+            # proceed to next stimulus
+            continue
+
+        # -- if event is followed by a reaction but trial is invalid --
+        elif new_evs[event + 1, 2] in {5, 6, 7, 8} \
+                and not valid_trial:
+            miss.append(trial)
+            reaction.append(np.nan)
+            rt.append(np.nan)
+            trial += 1
+
+            if task == 'congruentstroop':
+                condition.append('congruent')
+            elif task == 'incongruentstroop':
+                condition.append('incongruent')
+            elif task == 'mixedstroop':
+                if new_evs[event, 2] in {1, 2, 3, 4}:
+                    condition.append('congruent')
+                elif new_evs[event, 2] in {101, 102, 103, 104}:
+                    condition.append('incongruent')
+
+            # proceed to next stimulus
+            continue
+
+        # -- if event is followed by a reaction and trial is valid --
+        elif new_evs[event + 1, 2] in {5, 6, 7, 8} \
+                and valid_trial:
+
+            # --- if color green and reaction green ---
+            if new_evs[event, 2] in {1, 101}:
+                # add color and condition
+                color.append('green')
+                if task == 'congruentstroop':
+                    condition.append('congruent')
+                elif task == 'incongruentstroop':
+                    condition.append('incongruent')
+                elif task == 'mixedstroop':
+                    if new_evs[event, 2] in {1}:
+                        condition.append('congruent')
+                    elif new_evs[event, 2] in {101}:
+                        condition.append('incongruent')
+
+                if new_evs[event + 1, 2] == 5:
+                    # change event id as correct
+                    new_evs[event, 2] = 11
+                    new_evs[event + 1, 2] = 21
+                    reaction.append('correct')
+                else:
+                    new_evs[event, 2] = 31
+                    reaction.append('incorrect')
+
+            # --- if color red reaction red ---
+            elif new_evs[event, 2] in {2, 102}:
+                color.append('red')
+                if task == 'congruentstroop':
+                    condition.append('congruent')
+                elif task == 'incongruentstroop':
+                    condition.append('incongruent')
+                elif task == 'mixedstroop':
+                    if new_evs[event, 2] in {2}:
+                        condition.append('congruent')
+                    elif new_evs[event, 2] in {102}:
+                        condition.append('incongruent')
+
+                if new_evs[event + 1, 2] == 6:
+                    # recode as correct
+                    new_evs[event, 2] = 12
+                    new_evs[event + 1, 2] = 22
+                    reaction.append('correct')
+                else:
+                    new_evs[event, 2] = 32
+                    reaction.append('incorrect')
+
+            # --- if color yellow reaction yellow ---
+            elif new_evs[event, 2] in {3, 103}:
+                color.append('yellow')
+                if task == 'congruentstroop':
+                    condition.append('congruent')
+                elif task == 'incongruentstroop':
+                    condition.append('incongruent')
+                elif task == 'mixedstroop':
+                    if new_evs[event, 2] in {3}:
+                        condition.append('congruent')
+                    elif new_evs[event, 2] in {103}:
+                        condition.append('incongruent')
+
+                if new_evs[event + 1, 2] == 7:
+                    # recode as correct
+                    new_evs[event, 2] = 13
+                    new_evs[event + 1, 2] = 23
+                    reaction.append('correct')
+                else:
+                    new_evs[event, 2] = 33
+                    reaction.append('incorrect')
+
+            # --- if color blue reaction blue ---
+            elif new_evs[event, 2] in {4, 104}:
+                color.append('blue')
+                if task == 'congruentstroop':
+                    condition.append('congruent')
+                elif task == 'incongruentstroop':
+                    condition.append('incongruent')
+                elif task == 'mixedstroop':
+                    if new_evs[event, 2] in {4}:
+                        condition.append('congruent')
+                    elif new_evs[event, 2] in {104}:
+                        condition.append('incongruent')
+
+                if new_evs[event + 1, 2] == 8:
+                    # recode as correct
+                    new_evs[event, 2] = 14
+                    new_evs[event + 1, 2] = 24
+                    reaction.append('correct')
+                else:
+                    new_evs[event, 2] = 34
+                    reaction.append('incorrect')
+
+            # store trial id as good trial
+            good_trials.append(trial)
+            r_time = (new_evs[event + 1, 0] - new_evs[event, 0]) / sfreq
+            rt.append(r_time)
+            trial += 1
+            continue
+
+        # -- if event is a word but no reaction followed
+        elif new_evs[event + 1, 2] not in {5, 6, 7, 8} \
+                and valid_trial:
+
+            # store trial as miss
+            new_evs[event, 2] = 99
+            miss.append(trial)
+            trial += 1
+            reaction.append(np.nan)
+            rt.append(np.nan)
+
+            if task == 'congruentstroop':
+                condition.append('congruent')
+            elif task == 'incongruentstroop':
+                condition.append('incongruent')
+            elif task == 'mixedstroop':
+                if new_evs[event, 2] in {1, 2, 3, 4}:
+                    condition.append('congruent')
+                elif new_evs[event, 2] in {101, 102, 103, 104}:
+                    condition.append('incongruent')
+
+            # proceed to next stimulus
+            continue
+
+    # skip other events
+    else:
+        continue
 
 ###############################################################################
 # 4) Set descriptive event names for extraction of epochs
 
 # cue events
-stroop_event_id = {'Green': 1,
-                   'Red': 2,
-                   'Yellow': 3,
-                   'Blue': 4}
+stroop_event_id = {'correct green': 11,
+                   'correct red': 12,
+                   'correct yellow': 13,
+                   'correct blue': 14,
 
-# # probe events
-# probe_event_id = {'Too_soon X': 20,
-#                   'Too_soon Y': 21,
-#
-#                   'Correct AX': 23,
-#                   'Correct AY': 24,
-#
-#                   'Correct BX': 26,
-#                   'Correct BY': 27,
-#
-#                   'Incorrect AX': 29,
-#                   'Incorrect AY': 30,
-#
-#                   'Incorrect BX': 32,
-#                   'Incorrect BY': 33,
-#
-#                   'Missed AX': 35,
-#                   'Missed AY': 36,
-#
-#                   'Missed BX': 38,
-#                   'Missed BY': 39}
-#
-# ###############################################################################
+                   'incorrect green': 31,
+                   'incorrect red': 32,
+                   'incorrect yellow': 33,
+                   'incorrect blue': 34
+                   }
+
+
+# ##############################################################################
 # # 5) Create metadata structure to be added to the epochs
-#
-# # only keep cue events
-# cue_events = new_evs[np.where((new_evs[:, 2] == 18) |
-#                               (new_evs[:, 2] == 19) |
-#                               (new_evs[:, 2] == 22) |
-#                               (new_evs[:, 2] == 25) |
-#                               (new_evs[:, 2] == 28) |
-#                               (new_evs[:, 2] == 31) |
-#                               (new_evs[:, 2] == 34) |
-#                               (new_evs[:, 2] == 37))]
-#
-# # only keep probe events
-# probe_events = new_evs[np.where((new_evs[:, 2] == 20) |
-#                                 (new_evs[:, 2] == 21) |
-#                                 (new_evs[:, 2] == 23) |
-#                                 (new_evs[:, 2] == 24) |
-#                                 (new_evs[:, 2] == 26) |
-#                                 (new_evs[:, 2] == 27) |
-#                                 (new_evs[:, 2] == 29) |
-#                                 (new_evs[:, 2] == 30) |
-#                                 (new_evs[:, 2] == 32) |
-#                                 (new_evs[:, 2] == 33) |
-#                                 (new_evs[:, 2] == 35) |
-#                                 (new_evs[:, 2] == 36) |
-#                                 (new_evs[:, 2] == 38) |
-#                                 (new_evs[:, 2] == 39))]
-#
+
+# # only keep word events
+word_events = new_evs[np.where((new_evs[:, 2] == 11) |
+                               (new_evs[:, 2] == 12) |
+                               (new_evs[:, 2] == 13) |
+                               (new_evs[:, 2] == 14) |
+
+                               (new_evs[:, 2] == 31) |
+                               (new_evs[:, 2] == 32) |
+                               (new_evs[:, 2] == 33) |
+                               (new_evs[:, 2] == 34))]
+
 # # reversed event_id dict
 # cue_event_id_rev = {val: key for key, val in cue_event_id.items()}
 # probe_event_id_rev = {val: key for key, val in probe_event_id.items()}
-#
-# # check if events shape match
+
+# check if events shape match
 # if cue_events.shape[0] != probe_events.shape[0]:
 #     cue_events = np.delete(cue_events, broken, 0)
 #
@@ -367,18 +389,27 @@ stroop_event_id = {'Green': 1,
 #
 #     # save probe
 #     probes.append(probe)
-#
-# # create data frame with epochs metadata
-# metadata = {'block': np.delete(block, broken, 0),
-#             'trial': np.delete(np.arange(0, trial), broken, 0),
-#             'cue': cues,
-#             'probe': probes,
-#             'run': same_stim,
-#             'reaction_cues': reaction_cues,
-#             'reaction_probes': reaction_probes,
-#             'rt': np.delete(rt, broken, 0)}
-# metadata = pd.DataFrame(metadata)
-#
+
+# create data frame with epochs metadata
+metadata = {'trial': good_trials,
+            'color': color,
+            'rt': rt,
+            'reaction': reaction,
+            'condition': condition
+            }
+metadata = pd.DataFrame(metadata)
+
+# set run info
+run = ''
+if task == 'congruentstroop':
+    run = 'congruent stroop'
+elif task == 'incongruentstroop':
+    run = 'incongruent stroop'
+elif task == 'mixedstroop':
+    run = 'mixed stroop'
+metadata['run'] = run
+
+
 # # save RT measures for later analyses
 # rt_data = metadata.copy()
 # rt_data = rt_data.assign(subject=subject)
@@ -392,16 +423,16 @@ stroop_event_id = {'Green': 1,
 # 6) Extract the epochs
 
 # rejection threshold
-reject = dict(eeg=200e-6)
+reject = dict(eeg=100e-6)
 decim = 1
 
 if raw.info['sfreq'] == 1000.0:
-    decim = 10
+    decim = 8
 
 
 # extract cue epochs
-stroop_epochs = Epochs(raw, new_evs, stroop_event_id,
-                       # metadata=metadata,
+stroop_epochs = Epochs(raw, word_events, stroop_event_id,
+                       metadata=metadata,
                        on_missing='ignore',
                        tmin=-3.0,
                        tmax=2.0,
@@ -412,31 +443,6 @@ stroop_epochs = Epochs(raw, new_evs, stroop_event_id,
                        decim=decim
                        )
 
-# # extract probe epochs
-# probe_epochs = Epochs(raw, probe_events, probe_event_id,
-#                       metadata=metadata,
-#                       on_missing='ignore',
-#                       tmin=-3.,
-#                       tmax=2.,
-#                       baseline=None,
-#                       preload=True,
-#                       reject_by_annotation=True,
-#                       reject=reject,
-#                       decim=decim
-#                       )
-
-###############################################################################
-# 7) Save info about extracted and rejected epochs
-
-# clean cue epochs
-# clean_cues = cue_epochs.selection
-# bad_cues = [x for x in set(list(range(0, trial)))
-#             if x not in set(cue_epochs.selection)]
-# # clean probe epochs
-# clean_probes = probe_epochs.selection
-# bad_probes = [x for x in set(list(range(0, trial)))
-#               if x not in set(probe_epochs.selection)]
-
 ###############################################################################
 # 8) Save epochs
 
@@ -445,16 +451,9 @@ epochs_output_path = fname.output(subject=subject,
                                   task=task,
                                   processing_step='epochs',
                                   file_type='epo.fif')
-# # output path for epochs
-# probe_output_path = fname.output(processing_step='probe_epochs',
-#                                  subject=subject,
-#                                  file_type='epo.fif')
 
 # resample and save cue epochs to disk
 stroop_epochs.save(epochs_output_path, overwrite=True)
-
-# # also save probe epochs to disk
-# probe_epochs.save(probe_output_path, overwrite=True)
 
 ###############################################################################
 # # 9) Create HTML report
