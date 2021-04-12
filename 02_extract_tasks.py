@@ -11,16 +11,16 @@ License: BSD (3-clause)
 """
 import os
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import pandas as pd
 
-from mne import events_from_annotations, concatenate_raws
+from mne import events_from_annotations, concatenate_raws, Annotations
 from mne.io import read_raw_brainvision, read_raw_fif
 
 from mne_bids import write_raw_bids, BIDSPath
 
-from config import input_path, output_path, montage, tasks
+from config import input_path, output_path, montage, tasks, event_ids
 
 ###############################################################################
 # 1) check if target directory exists
@@ -51,10 +51,11 @@ for index, row in ids.iterrows():
     # sampling rate
     sfreq = raw.info['sfreq']
     # event onsets and events ids (annotations entailed in the EEG-file)
-    events, event_ids = events_from_annotations(raw)
+    events, event_ids = events_from_annotations(raw, event_id=event_ids)
 
     # *** 2) get start and end event markers for the desired tasks ***
     # name of fix cross end marker
+    start_marker = 0
     fix_marker = event_ids['Bedingung/B100']
     for task in tasks:
 
@@ -90,7 +91,7 @@ for index, row in ids.iterrows():
                 events[(events[:, 0] > start) & (events[:, 2] == fix_marker)]
 
             i = 0
-            while (fix_cross_evs[i+1, 0] - fix_cross_evs[i, 0] < 15*sfreq):
+            while (fix_cross_evs[i+1, 0] - fix_cross_evs[i, 0]) < 15*sfreq:
                 i += 1
                 if fix_cross_evs[i, 0] == fix_cross_evs[-1, 0]:
                     break
@@ -136,18 +137,18 @@ for index, row in ids.iterrows():
 
         # *** 6) create exploratory plots  ***
         # plot data
-        raw_plot = cs_raws.plot(scalings=dict(eeg=50e-6, eog=50e-6),
-                                n_channels=len(channels),
-                                show=False)
-        raw_plot.set_size_inches(8.0, 6.0)
-        raw_plot.savefig(subject_path + '/%s_%s_data.png' % (subj, task),
-                         dpi=300)
+        # raw_plot = cs_raws.plot(scalings=dict(eeg=50e-6, eog=50e-6),
+        #                         n_channels=len(channels),
+        #                         show=False)
+        # raw_plot.set_size_inches(8.0, 6.0)
+        # raw_plot.savefig(subject_path + '/%s_%s_data.png' % (subj, task),
+        #                  dpi=300)
 
         # plot power spectral density
-        fig, ax = plt.subplots(figsize=(8, 4))
-        cs_raws.plot_psd(show=False, ax=ax)
-        fig.savefig(subject_path + '/%s_%s_psd.png' % (subj, task), dpi=300)
-        plt.close('all')
+        # fig, ax = plt.subplots(figsize=(8, 4))
+        # cs_raws.plot_psd(show=False, ax=ax)
+        # fig.savefig(subject_path + '/%s_%s_psd.png' % (subj, task), dpi=300)
+        # plt.close('all')
 
         # *** 7) save file ***
         output_fname = os.path.join(subject_path,
@@ -156,15 +157,57 @@ for index, row in ids.iterrows():
 
         # reload raw and export to bids
         raw_short = read_raw_fif(output_fname, preload=False)
+        evs_short, ev_ids_short = events_from_annotations(raw_short,
+                                                          event_id=event_ids)
+        annotations = Annotations([], [], [])
+        raw_short.set_annotations(annotations)
 
         # *** 8) save file in BIDS compliant format ***
         bids_path = BIDSPath(
             subject=str(subject).rjust(3, '0'),
             task=task,
             root=output_path,
-            extension='.fif')
+            extension='.vhdr')
 
-        # save
+        # fixed names for events
+        new_ids = {
+            # fix cross
+            'fix cross': 100,
+
+            # start of tasks
+            'start S/C': 501,
+            'start S/I': 502,
+            'start S/M': 503,
+
+            'C/C/G': 101,
+            'I/C/G': 102,
+            'M/C/G': 103,
+            'M/I/G': 104,
+
+            'C/C/R': 201,
+            'I/C/R': 202,
+            'M/C/R': 203,
+            'M/I/R': 204,
+
+            'C/C/Y': 301,
+            'I/C/Y': 302,
+            'M/C/Y': 303,
+            'M/I/Y': 304,
+
+            'C/C/B': 401,
+            'I/C/B': 402,
+            'M/C/B': 403,
+            'M/I/B': 404,
+
+            # responses
+            'G': 1,
+            'R': 2,
+            'Y': 3,
+            'B': 4}
+
+        # save file
         write_raw_bids(raw_short,
                        bids_path,
+                       events_data=evs_short,
+                       event_id=new_ids,
                        overwrite=True)

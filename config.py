@@ -31,6 +31,42 @@ output_path = os.path.join(root_path, 'data_bids')
 # tasks
 tasks = ['congruentstroop', 'incongruentstroop', 'mixedstroop']
 
+event_ids = {
+    # fix cross
+    'Bedingung/B100': 100,
+
+    # start of tasks
+    'Bedingung/B 21': 501,
+    'Bedingung/B 23': 502,
+    'Bedingung/B 35': 503,
+
+    # word stimuli
+    'Bedingung/B 61': 101,
+    'Bedingung/B 62': 102,
+    'Bedingung/B 63': 103,
+    'Bedingung/B 64': 104,
+
+    'Bedingung/B 71': 201,
+    'Bedingung/B 72': 202,
+    'Bedingung/B 73': 203,
+    'Bedingung/B 74': 204,
+
+    'Bedingung/B 81': 301,
+    'Bedingung/B 82': 302,
+    'Bedingung/B 83': 303,
+    'Bedingung/B 84': 304,
+
+    'Bedingung/B 91': 401,
+    'Bedingung/B 92': 402,
+    'Bedingung/B 93': 403,
+    'Bedingung/B 94': 404,
+
+    # responses
+    'Bedingung/B  5': 1,
+    'Bedingung/B  6': 2,
+    'Bedingung/B  7': 3,
+    'Bedingung/B  8': 4}
+
 # get sensors arrangement
 montage = make_standard_montage(kind='standard_1005')
 

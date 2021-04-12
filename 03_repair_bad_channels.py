@@ -17,10 +17,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from mne import Annotations, open_report, create_info
-from mne.io import read_raw_brainvision, RawArray
+from mne.io import RawArray
+
+from mne_bids import BIDSPath, read_raw_bids
 
 # All parameters are defined in config.py
-from config import fname, parser, LoggingFormat, n_jobs, montage, max_peak
+from config import parser, LoggingFormat, fname, output_path, \
+    n_jobs, montage, max_peak
 from bads import find_bad_channels
 from viz import plot_z_scores
 
@@ -36,17 +39,26 @@ print(LoggingFormat.PURPLE +
       LoggingFormat.END)
 
 ##############################################################################
-# 1) Import the output from previous processing step
+# 1) import the data
+
+# name of the file
 input_file = fname.source(subject=subject,
                           task=task,
                           data_type='eeg')
+# bids-formated path to data
+bids_path = BIDSPath(
+    subject=str(subject).rjust(3, '0'),
+    task=task,
+    root=output_path,
+    extension='.vhdr')
 
 # check if file exists, otherwise terminate the script
 if not os.path.isfile(input_file):
     exit()
 
 # import existing file
-raw = read_raw_brainvision(input_file, preload=True)
+# raw = read_raw_brainvision(input_file, preload=True)
+raw = read_raw_bids(bids_path, extra_params=dict(preload=True))
 raw.set_montage(montage)
 
 ##############################################################################
@@ -240,8 +252,7 @@ if len(times) > 0:
     # create new annotation info
     annotations = Annotations(artifacts['onset'],
                               artifacts['duration'],
-                              artifacts['description'],
-                              orig_time=raw_copy.annotations.orig_time)
+                              artifacts['description'])
     # apply to raw data
     raw.set_annotations(annotations)
 
@@ -254,7 +265,7 @@ frequency_of_annotation = {x: annotated_channels.count(x) * 2
 # create plot with clean data
 plot_artefacts = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
                           n_channels=len(raw.info['ch_names']),
-                          title='Robust reference applied Sub-%s' % subject,
+                          title='Robust reference applied to Sub-%s' % subject,
                           show=False)
 plt.close('all')
 
