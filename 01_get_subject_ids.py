@@ -18,9 +18,10 @@ import pandas as pd
 
 from config import input_path, output_path
 
-# path to the directory containing the eeg files
-pattern = '\\d+[_-]+\\d+[_-]+[a-zA-Z].vhdr'
+# naming pattern
+# pattern = '\\d+[_-]+\\d+[_-]+[a-zA-Z].vhdr'
 
+# get subject ids
 subjects = pd.read_csv('../subjects_list.csv', sep=';', header=0)
 
 ##############################################################################
@@ -28,11 +29,11 @@ subjects = pd.read_csv('../subjects_list.csv', sep=';', header=0)
 files = glob.glob(os.path.join(input_path, '*.vhdr'))
 files.sort()
 files = [os.path.basename(file) for file in files]
-# only keep files that are named as expected (roughly)
-files = [file for file in files if re.search(pattern, file)]
 
+# only keep files that are named as expected (roughly)
+# files = [file for file in files if re.search(pattern, file)]
 # remove ambiguous
-files = [file for file in files if file != '21_08_M.vhdr']
+# files = [file for file in files if file != '21_08_M.vhdr']
 
 ##############################################################################
 # 2) loop through files and create unique subject and session IDs based on the
@@ -43,18 +44,40 @@ eeg_ids = []
 group_ids = []
 for n_file, file in enumerate(files):
 
-    # extract file identifiers from file name
-    id_0, id_1 = \
-        [int(re.split('[_-]', file)[i]) for i in [0, 1]]
-    # make sure they are in the correct format
-    d = str(id_0).rjust(2, '0')
-    m = str(id_1).rjust(2, '0')
+    print(n_file, file)
+
+    # extract file name components
+    if file == '31-07.vhdr':
+        d = '31'
+        m = '07'
+    else:
+        id_0, id_1 = \
+            [int(re.split('[_-]', file)[i]) for i in [0, 1]]
+        # make sure they are in the correct format
+        d = str(id_0).rjust(2, '0')
+        m = str(id_1).rjust(2, '0')
 
     # create measurement date
     meas_date = '2020-%s-%s' % (m, d)
 
     # extract session identifier
-    sess = re.split('[_-]', file)[-1].split('.')[0]
+    # (some files have weird names)
+    if file == '03-08-e-a.vhdr':
+        sess = 'E'
+    elif file == '06_08_M_not included.vhdr':
+        sess = 'M'
+    elif file == '14_08_M.D without baselin.vmrk.vhdr':
+        sess = 'M'
+    elif file == '16-09-M-badIM.vhdr':
+        sess = 'M'
+    elif file == '18_8_M _exclude.vhdr':
+        sess = 'M'
+    elif file == '31-07.vhdr':
+        sess = 'M'
+    elif file == '31_08_M not G.vhdr':
+        sess = 'M'
+    else:
+        sess = re.split('[_-]', file)[-1].split('.')[0]
 
     # get subject information
     subj_row = subjects.loc[(subjects['Measurement_Date'] == meas_date) &
