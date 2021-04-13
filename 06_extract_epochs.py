@@ -51,41 +51,6 @@ raw.pick_types(eeg=True)
 ###############################################################################
 # 2) Get events from continuous EEG data
 ev_id = None
-# if task in {'congruentstroop', 'incogruentstroop'}:
-#     # create a dictionary with event IDs for standardised handling
-#     ev_id = {'Stimulus/S 12': 100,
-#
-#              'Stimulus/S  8': 1,
-#              'Stimulus/S  9': 2,
-#              'Stimulus/S 10': 3,
-#              'Stimulus/S 11': 4,
-#
-#              'Stimulus/S  2': 5,
-#              'Stimulus/S  3': 6,
-#              'Stimulus/S  4': 7,
-#              'Stimulus/S  5': 8,
-#              }
-# elif task == {'mixedstroop'}:
-#     # create a dictionary with event IDs for standardised handling
-#     ev_id = {'Stimulus/S 16': 100,
-#
-#              'Stimulus/S  8': 1,
-#              'Stimulus/S  9': 101,
-#
-#              'Stimulus/S 10': 2,
-#              'Stimulus/S 11': 102,
-#
-#              'Stimulus/S 12': 3,
-#              'Stimulus/S 13': 103,
-#
-#              'Stimulus/S 14': 4,
-#              'Stimulus/S 15': 104,
-#
-#              'Stimulus/S  2': 5,
-#              'Stimulus/S  3': 6,
-#              'Stimulus/S  4': 7,
-#              'Stimulus/S  5': 8,
-#              }
 # fixed names for events
 new_ids = {
     # fix cross
@@ -126,8 +91,6 @@ new_ids = {
 # extract events
 events = events_from_annotations(raw, event_id=new_ids, regexp=None)
 
-# events[0][events[0][:, 2] == 100].shape
-
 ###############################################################################
 # 3) Recode events into respective conditions and add information about valid
 # and invalid responses
@@ -151,7 +114,7 @@ miss = []
 
 
 # place holders for results
-block = []
+# block = []
 reaction = []
 rt = []
 
@@ -167,7 +130,11 @@ for event in range(len(new_evs[:, 2])):
     # - if event is a fix cross -
     if new_evs[event, 2] == 100:
         # -- if fix cross was followed by word stimulus --
-        if new_evs[event + 1, 2] in {1, 2, 3, 4, 101, 102, 103, 104}:
+        if new_evs[event + 1, 2] in \
+                {101, 102, 103, 104,
+                 201, 202, 203, 204,
+                 301, 302, 303, 304,
+                 401, 402, 403, 404}:
             # change stimulus id to mark the beginning of a valid trial,
             # store stimulus id
             new_evs[event, 2] = 200
@@ -184,174 +151,127 @@ for event in range(len(new_evs[:, 2])):
         continue
 
     # - if event is a word stimulus -
-    elif new_evs[event, 2] in {1, 2, 3, 4, 101, 102, 103, 104}:
+    elif new_evs[event, 2] in \
+            {101, 102, 103, 104,
+             201, 202, 203, 204,
+             301, 302, 303, 304,
+             401, 402, 403, 404}:
 
         # -- if event is the last one --
         if new_evs[event, 0] == new_evs[-1, 0]:
-            # skip as no reaction was provided
-            new_evs[event, 2] = 99
+
+            # store condition information
+            if new_evs[event, 2] in {101, 201, 301, 401}:
+                condition.append('congruent')
+            elif new_evs[event, 2] in {102, 202, 302, 402}:
+                condition.append('incongruent')
+            elif new_evs[event, 2] in {103, 203, 303, 403}:
+                condition.append('congruent')
+            elif new_evs[event, 2] in {104, 204, 304, 404}:
+                condition.append('incongruent')
+
             # add event as missed reaction
             miss.append(trial)
             reaction.append(np.nan)
             rt.append(np.nan)
             trial += 1
 
-            if task == 'congruentstroop':
-                condition.append('congruent')
-            elif task == 'incongruentstroop':
-                condition.append('incongruent')
-            elif task == 'mixedstroop':
-                if new_evs[event, 2] in {1, 2, 3, 4}:
-                    condition.append('congruent')
-                elif new_evs[event, 2] in {101, 102, 103, 104}:
-                    condition.append('incongruent')
-
-            # proceed to next stimulus
+            # proceed to next stimulus as no reaction was provided
             continue
 
         # -- if event is followed by a reaction but trial is invalid --
-        elif new_evs[event + 1, 2] in {5, 6, 7, 8} \
-                and not valid_trial:
+        elif new_evs[event + 1, 2] in {1, 2, 3, 4} and not valid_trial:
+
+            # store condition information and reaction as missing
+            if new_evs[event, 2] in {101, 201, 301, 401}:
+                condition.append('congruent')
+            elif new_evs[event, 2] in {102, 202, 302, 402}:
+                condition.append('incongruent')
+            elif new_evs[event, 2] in {103, 203, 303, 403}:
+                condition.append('congruent')
+            elif new_evs[event, 2] in {104, 204, 304, 404}:
+                condition.append('incongruent')
             miss.append(trial)
             reaction.append(np.nan)
             rt.append(np.nan)
             trial += 1
 
-            if task == 'congruentstroop':
+            # proceed to next stimulus
+            continue
+
+        # -- if event is a word but no reaction followed
+        elif new_evs[event + 1, 2] not in {1, 2, 3, 4}:
+
+            # store condition information and reaction as missing
+            if new_evs[event, 2] in {101, 201, 301, 401}:
                 condition.append('congruent')
-            elif task == 'incongruentstroop':
+            elif new_evs[event, 2] in {102, 202, 302, 402}:
                 condition.append('incongruent')
-            elif task == 'mixedstroop':
-                if new_evs[event, 2] in {1, 2, 3, 4}:
-                    condition.append('congruent')
-                elif new_evs[event, 2] in {101, 102, 103, 104}:
-                    condition.append('incongruent')
+            elif new_evs[event, 2] in {103, 203, 303, 403}:
+                condition.append('congruent')
+            elif new_evs[event, 2] in {104, 204, 304, 404}:
+                condition.append('incongruent')
+            miss.append(trial)
+            reaction.append(np.nan)
+            rt.append(np.nan)
+            trial += 1
 
             # proceed to next stimulus
             continue
 
         # -- if event is followed by a reaction and trial is valid --
-        elif new_evs[event + 1, 2] in {5, 6, 7, 8} \
-                and valid_trial:
+        elif new_evs[event + 1, 2] in {1, 2, 3, 4} and valid_trial:
 
-            # --- if color green and reaction green ---
-            if new_evs[event, 2] in {1, 101}:
+            # add condition info
+            col = str(new_evs[event, 2])[0]
+            cond = str(new_evs[event, 2])[-1]
+            if cond == '1':
+                condition.append('congruent')
+            elif cond == '2':
+                condition.append('incongruent')
+            elif cond == '3':
+                condition.append('congruent')
+            elif cond == '4':
+                condition.append('incongruent')
+
+            # --- if color green ---
+            if new_evs[event, 2] in {101, 102, 103, 104}:
                 # add color and condition
                 color.append('green')
-                if task == 'congruentstroop':
-                    condition.append('congruent')
-                elif task == 'incongruentstroop':
-                    condition.append('incongruent')
-                elif task == 'mixedstroop':
-                    if new_evs[event, 2] in {1}:
-                        condition.append('congruent')
-                    elif new_evs[event, 2] in {101}:
-                        condition.append('incongruent')
 
-                if new_evs[event + 1, 2] == 5:
-                    # change event id as correct
-                    new_evs[event, 2] = 11
-                    new_evs[event + 1, 2] = 21
-                    reaction.append('correct')
-                else:
-                    new_evs[event, 2] = 31
-                    reaction.append('incorrect')
-
-            # --- if color red reaction red ---
-            elif new_evs[event, 2] in {2, 102}:
+            # --- if color red ---
+            elif new_evs[event, 2] in {201, 202, 203, 204}:
+                # add color and condition
                 color.append('red')
-                if task == 'congruentstroop':
-                    condition.append('congruent')
-                elif task == 'incongruentstroop':
-                    condition.append('incongruent')
-                elif task == 'mixedstroop':
-                    if new_evs[event, 2] in {2}:
-                        condition.append('congruent')
-                    elif new_evs[event, 2] in {102}:
-                        condition.append('incongruent')
 
-                if new_evs[event + 1, 2] == 6:
-                    # recode as correct
-                    new_evs[event, 2] = 12
-                    new_evs[event + 1, 2] = 22
-                    reaction.append('correct')
-                else:
-                    new_evs[event, 2] = 32
-                    reaction.append('incorrect')
-
-            # --- if color yellow reaction yellow ---
-            elif new_evs[event, 2] in {3, 103}:
+            # --- if color yellow ---
+            elif new_evs[event, 2] in {301, 302, 303, 304}:
+                # add color and condition
                 color.append('yellow')
-                if task == 'congruentstroop':
-                    condition.append('congruent')
-                elif task == 'incongruentstroop':
-                    condition.append('incongruent')
-                elif task == 'mixedstroop':
-                    if new_evs[event, 2] in {3}:
-                        condition.append('congruent')
-                    elif new_evs[event, 2] in {103}:
-                        condition.append('incongruent')
 
-                if new_evs[event + 1, 2] == 7:
-                    # recode as correct
-                    new_evs[event, 2] = 13
-                    new_evs[event + 1, 2] = 23
-                    reaction.append('correct')
-                else:
-                    new_evs[event, 2] = 33
-                    reaction.append('incorrect')
-
-            # --- if color blue reaction blue ---
-            elif new_evs[event, 2] in {4, 104}:
+            # --- if color blue ---
+            elif new_evs[event, 2] in {401, 402, 403, 404}:
+                # add color and condition
                 color.append('blue')
-                if task == 'congruentstroop':
-                    condition.append('congruent')
-                elif task == 'incongruentstroop':
-                    condition.append('incongruent')
-                elif task == 'mixedstroop':
-                    if new_evs[event, 2] in {4}:
-                        condition.append('congruent')
-                    elif new_evs[event, 2] in {104}:
-                        condition.append('incongruent')
 
-                if new_evs[event + 1, 2] == 8:
-                    # recode as correct
-                    new_evs[event, 2] = 14
-                    new_evs[event + 1, 2] = 24
-                    reaction.append('correct')
-                else:
-                    new_evs[event, 2] = 34
-                    reaction.append('incorrect')
+            # compute reaction correctness
+            reac = str(new_evs[event + 1, 2])
+            if col == reac:
+                reaction.append('correct')
+                new_evs[event + 1, 2] = new_evs[event + 1, 2] + 1000
+                new_evs[event, 2] = new_evs[event, 2] + 1000
+            else:
+                new_evs[event + 1, 2] = new_evs[event + 1, 2] + 2000
+                new_evs[event, 2] = new_evs[event, 2] + 2000
+                reaction.append('incorrect')
+
+            # compute reaction time
+            r_time = (new_evs[event + 1, 0] - new_evs[event, 0]) / sfreq
+            rt.append(r_time)
 
             # store trial id as good trial
             good_trials.append(trial)
-            r_time = (new_evs[event + 1, 0] - new_evs[event, 0]) / sfreq
-            rt.append(r_time)
             trial += 1
-            continue
-
-        # -- if event is a word but no reaction followed
-        elif new_evs[event + 1, 2] not in {5, 6, 7, 8} \
-                and valid_trial:
-
-            # store trial as miss
-            new_evs[event, 2] = 99
-            miss.append(trial)
-            trial += 1
-            reaction.append(np.nan)
-            rt.append(np.nan)
-
-            if task == 'congruentstroop':
-                condition.append('congruent')
-            elif task == 'incongruentstroop':
-                condition.append('incongruent')
-            elif task == 'mixedstroop':
-                if new_evs[event, 2] in {1, 2, 3, 4}:
-                    condition.append('congruent')
-                elif new_evs[event, 2] in {101, 102, 103, 104}:
-                    condition.append('incongruent')
-
-            # proceed to next stimulus
             continue
 
     # skip other events
@@ -361,32 +281,74 @@ for event in range(len(new_evs[:, 2])):
 ###############################################################################
 # 4) Set descriptive event names for extraction of epochs
 
-# cue events
-stroop_event_id = {'correct green': 11,
-                   'correct red': 12,
-                   'correct yellow': 13,
-                   'correct blue': 14,
+if task == 'congruentstroop':
+    # cue events
+    stroop_event_id = {'correct green congruent': 1101,
+                       'correct red congruent': 1201,
+                       'correct yellow congruent': 1301,
+                       'correct blue congruent': 1401,
 
-                   'incorrect green': 31,
-                   'incorrect red': 32,
-                   'incorrect yellow': 33,
-                   'incorrect blue': 34
-                   }
+                       'incorrect green congruent': 2101,
+                       'incorrect red congruent': 2201,
+                       'incorrect yellow congruent': 2301,
+                       'incorrect blue congruent': 2401
+                       }
+elif task == 'incongruentstroop':
+    stroop_event_id = {'correct green incongruent': 1102,
+                       'correct red incongruent': 1202,
+                       'correct yellow incongruent': 1302,
+                       'correct blue incongruent': 1402,
+
+                       'incorrect green incongruent': 2102,
+                       'incorrect red incongruent': 2202,
+                       'incorrect yellow incongruent': 2302,
+                       'incorrect blue incongruent': 2402
+                       }
+elif task == 'mixedstroop':
+    stroop_event_id = {'correct green congruent': 1103,
+                       'correct green incongruent': 1104,
+
+                       'correct red congruent': 1203,
+                       'correct red incongruent': 1204,
+
+                       'correct yellow congruent': 1303,
+                       'correct yellow incongruent': 1304,
+
+                       'correct blue congruent': 1403,
+                       'correct blue incongruent': 1404,
+
+                       'incorrect green congruent': 2103,
+                       'incorrect green incongruent': 2104,
+
+                       'incorrect red congruent': 2204,
+                       'incorrect red incongruent': 2204,
+
+                       'incorrect yellow congruent': 2303,
+                       'incorrect yellow incongruent': 2304,
+
+                       'incorrect blue congruent': 2403,
+                       'incorrect blue incongruent': 2404
+                       }
 
 
 # ##############################################################################
 # # 5) Create metadata structure to be added to the epochs
 
 # # only keep word events
-word_events = new_evs[np.where((new_evs[:, 2] == 11) |
-                               (new_evs[:, 2] == 12) |
-                               (new_evs[:, 2] == 13) |
-                               (new_evs[:, 2] == 14) |
+word_events = new_evs[np.where((new_evs[:, 2] == 1101) |
+                               (new_evs[:, 2] == 1201) |
+                               (new_evs[:, 2] == 1301) |
+                               (new_evs[:, 2] == 1401) |
 
-                               (new_evs[:, 2] == 31) |
-                               (new_evs[:, 2] == 32) |
-                               (new_evs[:, 2] == 33) |
-                               (new_evs[:, 2] == 34))]
+                               (new_evs[:, 2] == 2101) |
+                               (new_evs[:, 2] == 2201) |
+                               (new_evs[:, 2] == 2301) |
+                               (new_evs[:, 2] == 2401))]
+
+# word_events = new_evs[np.where((new_evs[:, 2] == 1101) |
+#                                (new_evs[:, 2] == 1201) |
+#                                (new_evs[:, 2] == 1301) |
+#                                (new_evs[:, 2] == 1401))]
 
 # # reversed event_id dict
 # cue_event_id_rev = {val: key for key, val in cue_event_id.items()}
@@ -428,22 +390,11 @@ word_events = new_evs[np.where((new_evs[:, 2] == 11) |
 # create data frame with epochs metadata
 metadata = {'trial': good_trials,
             'color': color,
-            'rt': rt,
-            'reaction': reaction,
-            'condition': condition
+            'rt': np.delete(rt, miss),
+            'reaction': np.delete(reaction, miss),
+            'condition': np.delete(condition, miss)
             }
 metadata = pd.DataFrame(metadata)
-
-# set run info
-run = ''
-if task == 'congruentstroop':
-    run = 'congruent stroop'
-elif task == 'incongruentstroop':
-    run = 'incongruent stroop'
-elif task == 'mixedstroop':
-    run = 'mixed stroop'
-metadata['run'] = run
-
 
 # # save RT measures for later analyses
 # rt_data = metadata.copy()

@@ -117,6 +117,10 @@ elif 'jose' in node and 'x' in system:
     # pc at home
     data_dir = '../data_bids'
     n_jobs = 'cuda'  # Use NVIDIA CUDA GPU processing
+elif 'ma' in node and 'n' in system:
+    # iMac at work
+    data_dir = '../data_bids'
+    n_jobs = 2  # This station has 4 cores (we'll use 2).
 else:
     # Defaults
     data_dir = '../data'

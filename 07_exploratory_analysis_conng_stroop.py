@@ -37,8 +37,8 @@ ids = pd.read_csv('../data_bids/subject_data/subject_ids.tsv',
                   header=0)
 
 # subjects
-subjects = np.arange(3, 63)
-task = 'incongruentstroop'
+subjects = np.arange(1, 63)
+task = 'congruentstroop'
 
 MCI = ids.loc[(ids['group_id'] == 'MCI')]
 
@@ -58,6 +58,7 @@ Control_erps = []
 
 # baseline to be applied
 baseline = (-1.75, -1.50)
+epo_list = []
 
 ###############################################################################
 # 1) loop through subjects and compute ERPs for A and B cues
@@ -76,20 +77,20 @@ for subj in subjects:
                               file_type='epo.fif')
 
     # check if file exists, otherwise terminate the script
-    if not os.path.isfile(input_file):
-        continue
-    elif subj in {3}:
+    if not os.path.isfile(input_file) or subj in {8, 18}:
         continue
 
     # import epochs
     stroop_epo = read_epochs(input_file, preload=True)
     stroop_epo = stroop_epo.apply_baseline(baseline)
+    stroop_epo = stroop_epo[stroop_epo.metadata['reaction'] == 'correct']
     stroop_epo = stroop_epo.average()
+    epo_list.append(stroop_epo)
 
-    if subj in MCI['subject_id']:
-        MCI_erps.append(stroop_epo)
-    else:
-        Control_erps.append(stroop_epo)
+    # if subj in MCI['subject_id']:
+    #     MCI_erps.append(stroop_epo)
+    # else:
+    #     Control_erps.append(stroop_epo)
 
 
     # stroop_epo.add_channels(['Cz'])
@@ -111,7 +112,7 @@ for subj in subjects:
 
 
 
-control = grand_average(Control_erps)
+control = grand_average(epo_list)
 mci = grand_average(MCI_erps)
 
 ttp = [0.1, 0.17, 0.22, 0.35, 0.5, 0.6]
