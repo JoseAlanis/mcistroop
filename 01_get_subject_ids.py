@@ -16,7 +16,7 @@ import re
 
 import pandas as pd
 
-from config import input_path, output_path
+from config import input_path, output_bids
 
 # naming pattern
 # pattern = '\\d+[_-]+\\d+[_-]+[a-zA-Z].vhdr'
@@ -104,7 +104,7 @@ subject_identifiers = {'file_name': files,
 subject_identifiers = pd.DataFrame(subject_identifiers)
 
 # check if target dir exists
-subject_data_path = os.path.join(output_path, 'subject_data')
+subject_data_path = os.path.join(output_bids, 'subject_data')
 os.makedirs(subject_data_path, exist_ok=True)
 
 # save subject data

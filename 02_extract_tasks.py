@@ -20,11 +20,11 @@ from mne.io import read_raw_brainvision, read_raw_fif
 
 from mne_bids import write_raw_bids, BIDSPath
 
-from config import input_path, output_path, montage, tasks, event_ids
+from config import input_path, output_bids, montage, tasks, event_ids
 
 ###############################################################################
 # 1) check if target directory exists
-sourcedata_path = os.path.join(output_path, 'sourcedata')
+sourcedata_path = os.path.join(output_bids, 'sourcedata')
 os.makedirs(sourcedata_path, exist_ok=True)
 
 # get subject id and file names
@@ -38,7 +38,7 @@ ids = pd.read_csv('../data_bids/subject_data/subject_ids.tsv',
 for index, row in ids.iterrows():
 
     # bad files
-    if row['file_name'] in {'03-08-E.vhdr', '14_08_M.vhdr'} :
+    if row['file_name'] in {'03-08-E.vhdr', '14_08_M.vhdr'}:
         continue
 
     print(index, row)
@@ -132,7 +132,7 @@ for index, row in ids.iterrows():
 
         # 5) check if target directory exists
         subj = 'sub-%s' % str(subject).rjust(3, '0')
-        subject_path = os.path.join(output_path, 'sourcedata', subj, 'eeg')
+        subject_path = os.path.join(output_bids, 'sourcedata', subj, 'eeg')
         os.makedirs(subject_path, exist_ok=True)
 
         # *** 6) create exploratory plots  ***
@@ -166,7 +166,7 @@ for index, row in ids.iterrows():
         bids_path = BIDSPath(
             subject=str(subject).rjust(3, '0'),
             task=task,
-            root=output_path,
+            root=output_bids,
             extension='.vhdr')
 
         # fixed names for events

@@ -61,6 +61,9 @@ temp_subjs = [16]
 temp_raws = []
 temp_icas = []
 
+threshold_up = 0.90
+threshold_side = 0.85
+
 # import template subjects
 for subj in temp_subjs:
     temp_raws.append(read_raw_fif(fname.output(subject=subj,
@@ -74,9 +77,9 @@ for subj in temp_subjs:
 
 # compute correlations with template ocular movements up/down and left/right
 corrmap(icas=[temp_icas[0], ica],
-        template=(0, 0), threshold=0.90, label='blink_up', plot=False)
+        template=(0, 0), threshold=threshold_up, label='blink_up', plot=False)
 corrmap(icas=[temp_icas[0], ica],
-        template=(0, 1), threshold=0.90, label='blink_side', plot=False)
+        template=(0, 1), threshold=threshold_side, label='blink_side', plot=False)
 # corrmap(icas=[temp_icas[1], ica],
 #         template=(0, 2), threshold=0.80, label='blink_weird', plot=False)
 
@@ -86,7 +89,7 @@ corrmap(icas=[temp_icas[0], ica],
 # condition
 
 # create a-cue epochs
-a_evs = events_from_annotations(raw, regexp='Stimulus\/S 12')[0]
+a_evs = events_from_annotations(raw, regexp='^fix')[0]
 a_epo = Epochs(raw, a_evs,
                tmin=-2,
                tmax=2,

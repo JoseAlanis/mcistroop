@@ -26,7 +26,7 @@ root_path = os.path.dirname(wd)
 
 # set relative input and output paths for generating the sourcedata directory
 input_path = os.path.join(root_path, 'orig_eeg')
-output_path = os.path.join(root_path, 'data_bids')
+output_bids = os.path.join(root_path, 'data_bids')
 
 # tasks
 tasks = ['congruentstroop', 'incongruentstroop', 'mixedstroop']

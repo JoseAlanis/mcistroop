@@ -22,7 +22,7 @@ from mne.io import RawArray
 from mne_bids import BIDSPath, read_raw_bids
 
 # All parameters are defined in config.py
-from config import parser, LoggingFormat, fname, output_path, \
+from config import parser, LoggingFormat, fname, output_bids, \
     n_jobs, montage, max_peak
 from bads import find_bad_channels
 from viz import plot_z_scores
@@ -45,11 +45,11 @@ print(LoggingFormat.PURPLE +
 input_file = fname.source(subject=subject,
                           task=task,
                           data_type='eeg')
-# bids-formated path to data
+# bids-formatted path to data
 bids_path = BIDSPath(
     subject=str(subject).rjust(3, '0'),
     task=task,
-    root=output_path,
+    root=output_bids,
     extension='.vhdr')
 
 # check if file exists, otherwise terminate the script
@@ -88,13 +88,7 @@ raw = raw.copy().filter(l_freq=0.1, h_freq=40.,
                         n_jobs=n_jobs)
 
 ##############################################################################
-# 3) recover ref and ground channel lost during recording via interpolation
-# raw = add_reference_channels(raw, ref_channels=['Cz'])
-# raw.info['bads'] = ['Cz']
-# raw.interpolate_bads(mode='accurate')
-
-##############################################################################
-# 4) Find noisy channels and compute robust average reference
+# 3) Find noisy channels and compute robust average reference
 sfreq = raw.info['sfreq']
 channels = raw.copy().pick_types(eeg=True).ch_names
 
@@ -150,7 +144,7 @@ while True:
     i = i + 1
 
 ##############################################################################
-# 5) Compute robust average reference for EEG data
+# 4) Compute robust average reference for EEG data
 # remove robust reference
 eeg_signal = raw.get_data(picks='eeg')
 eeg_temp = eeg_signal - ref_signal
@@ -184,11 +178,11 @@ raw.info['bads'] = list(bad_channels)
 raw.interpolate_bads(mode='accurate')
 
 ##############################################################################
-# 6) Reference eeg data to average of all eeg channels
+# 5) Reference eeg data to average of all eeg channels
 raw.set_eeg_reference(ref_channels='average', projection=True)
 
 ##############################################################################
-# 7) Find distorted segments in data
+# 6) Find distorted segments in data
 # channels to use in artefact detection procedure
 eeg_channels = raw.copy().pick_types(eeg=True).ch_names
 
@@ -270,11 +264,11 @@ plot_artefacts = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
 plt.close('all')
 
 ##############################################################################
-# 8) Add the computed robust average reference to the data
+# 7) Add the computed robust average reference to the data
 raw.apply_proj()
 
 ###############################################################################
-# 9) Create and interpolation missing channels
+# 8) Create and interpolation missing channels
 
 # place holder structure
 custom_info = create_info(ch_names=['FCz', 'Cz'],
@@ -287,6 +281,7 @@ custom_data = np.zeros((len(custom_info['ch_names']),
 custom_raw = RawArray(custom_data, custom_info, raw.first_samp)
 custom_raw.info['highpass'] = raw.info['highpass']
 custom_raw.info['lowpass'] = raw.info['lowpass']
+custom_raw.info['line_freq'] = raw.info['line_freq']
 
 # add newly created channels to original raw
 raw.add_channels([custom_raw])
@@ -297,7 +292,7 @@ raw.info['bads'] = ['FCz', 'Cz']
 raw.interpolate_bads(mode='accurate')
 
 ##############################################################################
-# 10) Export data to .fif for further processing
+# 9) Export data to .fif for further processing
 # output path
 output_path = fname.output(subject=subject,
                            task=task,

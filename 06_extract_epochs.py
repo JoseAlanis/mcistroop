@@ -51,45 +51,80 @@ raw.pick_types(eeg=True)
 ###############################################################################
 # 2) Get events from continuous EEG data
 ev_id = None
-if task in {'congruentstroop', 'incogruentstroop'}:
-    # create a dictionary with event IDs for standardised handling
-    ev_id = {'Stimulus/S 12': 100,
+# if task in {'congruentstroop', 'incogruentstroop'}:
+#     # create a dictionary with event IDs for standardised handling
+#     ev_id = {'Stimulus/S 12': 100,
+#
+#              'Stimulus/S  8': 1,
+#              'Stimulus/S  9': 2,
+#              'Stimulus/S 10': 3,
+#              'Stimulus/S 11': 4,
+#
+#              'Stimulus/S  2': 5,
+#              'Stimulus/S  3': 6,
+#              'Stimulus/S  4': 7,
+#              'Stimulus/S  5': 8,
+#              }
+# elif task == {'mixedstroop'}:
+#     # create a dictionary with event IDs for standardised handling
+#     ev_id = {'Stimulus/S 16': 100,
+#
+#              'Stimulus/S  8': 1,
+#              'Stimulus/S  9': 101,
+#
+#              'Stimulus/S 10': 2,
+#              'Stimulus/S 11': 102,
+#
+#              'Stimulus/S 12': 3,
+#              'Stimulus/S 13': 103,
+#
+#              'Stimulus/S 14': 4,
+#              'Stimulus/S 15': 104,
+#
+#              'Stimulus/S  2': 5,
+#              'Stimulus/S  3': 6,
+#              'Stimulus/S  4': 7,
+#              'Stimulus/S  5': 8,
+#              }
+# fixed names for events
+new_ids = {
+    # fix cross
+    'fix cross': 100,
 
-             'Stimulus/S  8': 1,
-             'Stimulus/S  9': 2,
-             'Stimulus/S 10': 3,
-             'Stimulus/S 11': 4,
+    # start of tasks
+    'start S/C': 501,
+    'start S/I': 502,
+    'start S/M': 503,
 
-             'Stimulus/S  2': 5,
-             'Stimulus/S  3': 6,
-             'Stimulus/S  4': 7,
-             'Stimulus/S  5': 8,
-             }
-elif task == {'mixedstroop'}:
-    # create a dictionary with event IDs for standardised handling
-    ev_id = {'Stimulus/S 16': 100,
+    'C/C/G': 101,
+    'I/C/G': 102,
+    'M/C/G': 103,
+    'M/I/G': 104,
 
-             'Stimulus/S  8': 1,
-             'Stimulus/S  9': 101,
+    'C/C/R': 201,
+    'I/C/R': 202,
+    'M/C/R': 203,
+    'M/I/R': 204,
 
-             'Stimulus/S 10': 2,
-             'Stimulus/S 11': 102,
+    'C/C/Y': 301,
+    'I/C/Y': 302,
+    'M/C/Y': 303,
+    'M/I/Y': 304,
 
-             'Stimulus/S 12': 3,
-             'Stimulus/S 13': 103,
+    'C/C/B': 401,
+    'I/C/B': 402,
+    'M/C/B': 403,
+    'M/I/B': 404,
 
-             'Stimulus/S 14': 4,
-             'Stimulus/S 15': 104,
-
-             'Stimulus/S  2': 5,
-             'Stimulus/S  3': 6,
-             'Stimulus/S  4': 7,
-             'Stimulus/S  5': 8,
-             }
+    # responses
+    'G': 1,
+    'R': 2,
+    'Y': 3,
+    'B': 4}
 
 
 # extract events
-events = events_from_annotations(raw, event_id=ev_id, regexp=None)
+events = events_from_annotations(raw, event_id=new_ids, regexp=None)
 
 # events[0][events[0][:, 2] == 100].shape
 
