@@ -52,41 +52,68 @@ raw.pick_types(eeg=True)
 # 2) Get events from continuous EEG data
 ev_id = None
 # fixed names for events
-new_ids = {
-    # fix cross
-    'fix cross': 100,
+new_ids = dict()
+if task == 'congruentstroop':
+    new_ids = {
+        # fix cross
+        'fix cross': 100,
 
-    # start of tasks
-    'start S/C': 501,
-    'start S/I': 502,
-    'start S/M': 503,
+        # start of tasks
+        'start S/C': 501,
 
-    'C/C/G': 101,
-    'I/C/G': 102,
-    'M/C/G': 103,
-    'M/I/G': 104,
+        'C/C/G': 101,
+        'C/C/R': 201,
+        'C/C/Y': 301,
+        'C/C/B': 401,
 
-    'C/C/R': 201,
-    'I/C/R': 202,
-    'M/C/R': 203,
-    'M/I/R': 204,
+        # responses
+        'G': 1,
+        'R': 2,
+        'Y': 3,
+        'B': 4}
+elif task == 'incongruentstroop':
+    new_ids = {
+        # fix cross
+        'fix cross': 100,
 
-    'C/C/Y': 301,
-    'I/C/Y': 302,
-    'M/C/Y': 303,
-    'M/I/Y': 304,
+        # start of tasks
+        'start S/I': 502,
 
-    'C/C/B': 401,
-    'I/C/B': 402,
-    'M/C/B': 403,
-    'M/I/B': 404,
+        'I/C/G': 102,
+        'I/C/R': 202,
+        'I/C/Y': 302,
+        'I/C/B': 402,
 
-    # responses
-    'G': 1,
-    'R': 2,
-    'Y': 3,
-    'B': 4}
+        # responses
+        'G': 1,
+        'R': 2,
+        'Y': 3,
+        'B': 4}
+elif task == 'mixedstroop':
+    new_ids = {
+        # fix cross
+        'fix cross': 100,
 
+        # start of tasks
+        'start S/I': 502,
+
+        'M/C/G': 103,
+        'M/I/G': 104,
+
+        'M/C/R': 203,
+        'M/I/R': 204,
+
+        'M/C/Y': 303,
+        'M/I/Y': 304,
+
+        'M/C/B': 403,
+        'M/I/B': 404,
+
+        # responses
+        'G': 1,
+        'R': 2,
+        'Y': 3,
+        'B': 4}
 
 # extract events
 events = events_from_annotations(raw, event_id=new_ids, regexp=None)
@@ -111,7 +138,6 @@ valid_trial = True
 invalid_trials = []
 good_trials = []
 miss = []
-
 
 # place holders for results
 # block = []
@@ -280,7 +306,7 @@ for event in range(len(new_evs[:, 2])):
 
 ###############################################################################
 # 4) Set descriptive event names for extraction of epochs
-
+stroop_event_id = dict()
 if task == 'congruentstroop':
     # cue events
     stroop_event_id = {'correct green congruent': 1101,
@@ -334,58 +360,48 @@ elif task == 'mixedstroop':
 # ##############################################################################
 # # 5) Create metadata structure to be added to the epochs
 
-# # only keep word events
-word_events = new_evs[np.where((new_evs[:, 2] == 1101) |
-                               (new_evs[:, 2] == 1201) |
-                               (new_evs[:, 2] == 1301) |
-                               (new_evs[:, 2] == 1401) |
+word_events = dict()
+if task == 'congruentstroop':
+    # only keep word events
+    word_events = new_evs[np.where((new_evs[:, 2] == 1101) |
+                                   (new_evs[:, 2] == 1201) |
+                                   (new_evs[:, 2] == 1301) |
+                                   (new_evs[:, 2] == 1401) |
 
-                               (new_evs[:, 2] == 2101) |
-                               (new_evs[:, 2] == 2201) |
-                               (new_evs[:, 2] == 2301) |
-                               (new_evs[:, 2] == 2401))]
+                                   (new_evs[:, 2] == 2101) |
+                                   (new_evs[:, 2] == 2201) |
+                                   (new_evs[:, 2] == 2301) |
+                                   (new_evs[:, 2] == 2401))]
+elif task == 'incongruentstroop':
+    # only keep word events
+    word_events = new_evs[np.where((new_evs[:, 2] == 1102) |
+                                   (new_evs[:, 2] == 1202) |
+                                   (new_evs[:, 2] == 1302) |
+                                   (new_evs[:, 2] == 1402) |
 
-# word_events = new_evs[np.where((new_evs[:, 2] == 1101) |
-#                                (new_evs[:, 2] == 1201) |
-#                                (new_evs[:, 2] == 1301) |
-#                                (new_evs[:, 2] == 1401))]
+                                   (new_evs[:, 2] == 2102) |
+                                   (new_evs[:, 2] == 2202) |
+                                   (new_evs[:, 2] == 2302) |
+                                   (new_evs[:, 2] == 2402))]
+elif task == 'mixedstroop':
+    # only keep word events
+    word_events = new_evs[np.where((new_evs[:, 2] == 1103) |
+                                   (new_evs[:, 2] == 1203) |
+                                   (new_evs[:, 2] == 1303) |
+                                   (new_evs[:, 2] == 1403) |
+                                   (new_evs[:, 2] == 1104) |
+                                   (new_evs[:, 2] == 1204) |
+                                   (new_evs[:, 2] == 1304) |
+                                   (new_evs[:, 2] == 1404) |
 
-# # reversed event_id dict
-# cue_event_id_rev = {val: key for key, val in cue_event_id.items()}
-# probe_event_id_rev = {val: key for key, val in probe_event_id.items()}
-
-# check if events shape match
-# if cue_events.shape[0] != probe_events.shape[0]:
-#     cue_events = np.delete(cue_events, broken, 0)
-#
-# # create list with reactions based on cue and probe event ids
-# same_stim, reaction_cues, reaction_probes, cues, probes = [], [], [], [], []
-# for cue, probe in zip(cue_events[:, 2], probe_events[:, 2]):
-#     response, cue = cue_event_id_rev[cue].split(' ')
-#     reaction_cues.append(response)
-#     # save cue
-#     cues.append(cue)
-#
-#     # save response
-#     response, probe = probe_event_id_rev[probe].split(' ')
-#     reaction_probes.append(response)
-#
-#     # check if same type of combination was shown in the previous trail
-#     if len(probes):
-#         stim = same_stim[-1]
-#         if probe == probes[-1] \
-#                 and response == 'Correct' \
-#                 and reaction_probes[-2] == 'Correct':
-#             stim += 1
-#             same_stim.append(stim)
-#         else:
-#             same_stim.append(0)
-#     else:
-#         stim = 0
-#         same_stim.append(0)
-#
-#     # save probe
-#     probes.append(probe)
+                                   (new_evs[:, 2] == 2103) |
+                                   (new_evs[:, 2] == 2203) |
+                                   (new_evs[:, 2] == 2303) |
+                                   (new_evs[:, 2] == 2403) |
+                                   (new_evs[:, 2] == 2104) |
+                                   (new_evs[:, 2] == 2204) |
+                                   (new_evs[:, 2] == 2304) |
+                                   (new_evs[:, 2] == 2404))]
 
 # create data frame with epochs metadata
 metadata = {'trial': good_trials,
@@ -409,12 +425,11 @@ metadata = pd.DataFrame(metadata)
 # 6) Extract the epochs
 
 # rejection threshold
-reject = dict(eeg=100e-6)
+reject = dict(eeg=250e-6)
 decim = 1
 
 if raw.info['sfreq'] == 1000.0:
     decim = 8
-
 
 # extract cue epochs
 stroop_epochs = Epochs(raw, word_events, stroop_event_id,
@@ -467,46 +482,3 @@ stroop_epochs.save(epochs_output_path, overwrite=True)
 #                                 replace=True)
 #     report.save(fname.report(subject=subject)[1], overwrite=True,
 #                 open_browser=False)
-
-###############################################################################
-# 10) Save time bins for further analysis
-#
-# # extract corrects
-# correct_epochs = cue_epochs['Correct A', 'Correct B']
-# # apply baseline correction
-# correct_epochs.apply_baseline((-0.300, -0.050))
-#
-# # epochs to pandas dataframe
-# df = correct_epochs.to_data_frame(long_format=True)
-#
-# # get time roi N170
-# n170 = df[((df["time"] >= 150) & (df["time"] <= 250))
-#           & ((df["channel"] == 'PO8') |
-#              (df["channel"] == 'PO7') |
-#              (df["channel"] == 'FCz'))]
-# n170 = n170.assign(subject=subject)
-#
-# # get time roi LPC
-# LPC = df[((df["time"] >= 400) & (df["time"] <= 750))
-#          & (df["channel"] == 'Pz')]
-# LPC = LPC.assign(subject=subject)
-#
-# # get time roi CNV
-# CNV = df[((df["time"] >= 1000) & (df["time"] <= 1750))
-#          & (df["channel"] == 'C1')]
-# CNV = CNV.assign(subject=subject)
-#
-# # export to .tsv files
-# n170.to_csv(op.join(fname.rois,
-#                     'sub-%s-n170.tsv' % subject),
-#             sep='\t',
-#             index=False)
-# LPC.to_csv(op.join(fname.rois,
-#                    'sub-%s-LPC.tsv' % subject),
-#            sep='\t',
-#            index=False)
-#
-# CNV.to_csv(op.join(fname.rois,
-#                    'sub-%s-cnv.tsv' % subject),
-#            sep='\t',
-#            index=False)

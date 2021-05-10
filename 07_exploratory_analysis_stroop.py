@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import Normalize
-font = 'Arial'  # noqa
+font = 'Mukta'  # noqa
 
 from mne import read_epochs, combine_evoked, grand_average
 from mne.channels import make_1020_channel_selections
@@ -42,8 +42,11 @@ task = 'congruentstroop'
 
 MCI = ids.loc[(ids['group_id'] == 'MCI')]
 
-MCI_erps = []
-Control_erps = []
+MCI_erps_cong = []
+Control_erps_cong = []
+
+MCI_erps_incong = []
+Control_erps_incong = []
 
 # dicts for storing individual sets of epochs/ERPs
 # green = dict()
@@ -80,17 +83,42 @@ for subj in subjects:
     if not os.path.isfile(input_file) or subj in {8, 18}:
         continue
 
-    # import epochs
     stroop_epo = read_epochs(input_file, preload=True)
-    stroop_epo = stroop_epo.apply_baseline(baseline)
-    stroop_epo = stroop_epo[stroop_epo.metadata['reaction'] == 'correct']
-    stroop_epo = stroop_epo.average()
-    epo_list.append(stroop_epo)
 
-    # if subj in MCI['subject_id']:
-    #     MCI_erps.append(stroop_epo)
-    # else:
-    #     Control_erps.append(stroop_epo)
+    stroop_epo_correct = stroop_epo['reaction == "correct"']
+    # stroop_epo_incorrect = stroop_epo['reaction == "incorrect"']
+
+    # set tasks
+    if task == 'congruentstroop':
+        stroop_epo_correct = stroop_epo_correct.apply_baseline(
+            baseline).average()
+        if subj in MCI['subject_id']:
+            MCI_erps_cong.append(stroop_epo_correct)
+        else:
+            Control_erps_cong.append(stroop_epo_correct)
+
+    if task == 'incongruentstroop':
+        stroop_epo_correct = stroop_epo_correct.apply_baseline(
+            baseline).average()
+        if subj in MCI['subject_id']:
+            MCI_erps_incong.append(stroop_epo_correct)
+        else:
+            Control_erps_incong.append(stroop_epo_correct)
+
+    if task == 'mixedstroop':
+        stroop_epo_c_correct = stroop_epo_correct['condition == "congruent"']
+        stroop_epo_c_correct = stroop_epo_c_correct.apply_baseline(
+            baseline).average()
+        stroop_epo_i_correct = stroop_epo_correct['condition == "incongruent"']
+        stroop_epo_i_correct = stroop_epo_i_correct.apply_baseline(
+            baseline).average()
+        if subj in MCI['subject_id']:
+            MCI_erps_cong.append(stroop_epo_c_correct)
+            MCI_erps_incong.append(stroop_epo_c_correct)
+        else:
+            Control_erps_cong.append(stroop_epo_i_correct)
+            Control_erps_incong.append(stroop_epo_i_correct)
+
 
 
     # stroop_epo.add_channels(['Cz'])
@@ -112,23 +140,37 @@ for subj in subjects:
 
 
 
-control = grand_average(epo_list)
-mci = grand_average(MCI_erps)
+control = grand_average(Control_erps_cong)
+mci = grand_average(MCI_erps_cong)
 
-ttp = [0.1, 0.17, 0.22, 0.35, 0.5, 0.6]
+control_i = grand_average([i for i in np.delete(Control_erps_incong, -4)])
+mci_i = grand_average(MCI_erps_incong)
+
+
+ttp = [-0.1, 0.1, 0.17, 0.22, 0.33, 0.5, 0.6]
 ts_args = dict(gfp=False,
                time_unit='s',
                ylim=dict(eeg=[-12.5, 12.5]),
                xlim=[-1.85, None])
+topomap_args = dict(sensors=False,
+                    time_unit='ms',
+                    vmin=10, vmax=-10,
+                    average=0.05,
+                    extrapolate='head',
+                    outlines='head')
 
-control.plot_joint(times=ttp, ts_args=ts_args, title='Control')
-mci.plot_joint(times=ttp, ts_args=ts_args, title='MCI')
+control_i.plot_joint(times=ttp, ts_args=ts_args,
+                     topomap_args=topomap_args, title='Control')
+mci_i.plot_joint(times=ttp, ts_args=ts_args, topomap_args=topomap_args,
+                 title='MCI')
 
 evokeds = {'Control': control.copy(),
            'MCI': mci.copy()}
-control.plot_sensors()
 
-plot_compare_evokeds(evokeds=evokeds, picks=['P4'],
+evokeds_i = {'Control': control_i.copy(),
+           'MCI': mci_i.copy()}
+
+plot_compare_evokeds(evokeds=evokeds_i, picks=['Cz'],
                      ylim=dict(eeg=[-10, 10]))
 
 

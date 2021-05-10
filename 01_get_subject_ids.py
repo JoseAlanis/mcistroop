@@ -32,8 +32,6 @@ files = [os.path.basename(file) for file in files]
 
 # only keep files that are named as expected (roughly)
 # files = [file for file in files if re.search(pattern, file)]
-# remove ambiguous
-# files = [file for file in files if file != '21_08_M.vhdr']
 
 ##############################################################################
 # 2) loop through files and create unique subject and session IDs based on the
@@ -50,6 +48,12 @@ for n_file, file in enumerate(files):
     if file == '31-07.vhdr':
         d = '31'
         m = '07'
+    elif file == '11-08-M.vhdr':
+        d = '11'
+        m = '09'
+    elif file == '11_08_M.vhdr':
+        d = '11'
+        m = '08'
     else:
         id_0, id_1 = \
             [int(re.split('[_-]', file)[i]) for i in [0, 1]]
@@ -64,6 +68,8 @@ for n_file, file in enumerate(files):
     # (some files have weird names)
     if file == '03-08-e-a.vhdr':
         sess = 'E'
+    elif file in {'11_08_M.vhdr', '11-08-M.vhdr'}:
+        sess = 'M'
     elif file == '06_08_M_not included.vhdr':
         sess = 'M'
     elif file == '14_08_M.D without baselin.vmrk.vhdr':

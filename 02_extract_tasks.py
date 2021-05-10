@@ -37,10 +37,6 @@ ids = pd.read_csv('../data_bids/subject_data/subject_ids.tsv',
 # necessary information and export the copy in a way BIDS-compliant way
 for index, row in ids.iterrows():
 
-    # bad files
-    if row['file_name'] in {'03-08-E.vhdr', '14_08_M.vhdr'}:
-        continue
-
     print(index, row)
 
     # path and filename
