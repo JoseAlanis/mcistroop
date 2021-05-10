@@ -55,11 +55,11 @@ ev_id = None
 new_ids = dict()
 if task == 'congruentstroop':
     new_ids = {
-        # fix cross
-        'fix cross': 100,
-
         # start of tasks
         'start S/C': 501,
+
+        # fix cross
+        'fix cross': 100,
 
         'C/C/G': 101,
         'C/C/R': 201,
@@ -73,11 +73,11 @@ if task == 'congruentstroop':
         'B': 4}
 elif task == 'incongruentstroop':
     new_ids = {
-        # fix cross
-        'fix cross': 100,
-
         # start of tasks
         'start S/I': 502,
+
+        # fix cross
+        'fix cross': 100,
 
         'I/C/G': 102,
         'I/C/R': 202,
@@ -91,11 +91,11 @@ elif task == 'incongruentstroop':
         'B': 4}
 elif task == 'mixedstroop':
     new_ids = {
+        # start of tasks
+        'start S/M': 503,
+
         # fix cross
         'fix cross': 100,
-
-        # start of tasks
-        'start S/I': 502,
 
         'M/C/G': 103,
         'M/I/G': 104,
@@ -127,7 +127,6 @@ new_evs = events[0].copy()
 
 # global variables
 sfreq = raw.info['sfreq']
-block_end = events[0][events[0][:, 2] == 17, 0] / sfreq
 
 # trial counter
 fix = 0
@@ -146,12 +145,6 @@ rt = []
 
 # loop trough events and recode them
 for event in range(len(new_evs[:, 2])):
-
-    # # save block based on onset (before or after break)
-    # if (new_evs[event, 0] / sfreq) < block_end:
-    #     block.append(0)
-    # else:
-    #     block.append(1)
 
     # - if event is a fix cross -
     if new_evs[event, 2] == 100:
@@ -187,15 +180,10 @@ for event in range(len(new_evs[:, 2])):
         if new_evs[event, 0] == new_evs[-1, 0]:
 
             # store condition information
-            if new_evs[event, 2] in {101, 201, 301, 401}:
+            if new_evs[event, 2] % 2:
                 condition.append('congruent')
-            elif new_evs[event, 2] in {102, 202, 302, 402}:
+            elif new_evs[event, 2] % 2 == 0:
                 condition.append('incongruent')
-            elif new_evs[event, 2] in {103, 203, 303, 403}:
-                condition.append('congruent')
-            elif new_evs[event, 2] in {104, 204, 304, 404}:
-                condition.append('incongruent')
-
             # add event as missed reaction
             miss.append(trial)
             reaction.append(np.nan)
@@ -208,14 +196,10 @@ for event in range(len(new_evs[:, 2])):
         # -- if event is followed by a reaction but trial is invalid --
         elif new_evs[event + 1, 2] in {1, 2, 3, 4} and not valid_trial:
 
-            # store condition information and reaction as missing
-            if new_evs[event, 2] in {101, 201, 301, 401}:
+            # store condition information
+            if new_evs[event, 2] % 2:
                 condition.append('congruent')
-            elif new_evs[event, 2] in {102, 202, 302, 402}:
-                condition.append('incongruent')
-            elif new_evs[event, 2] in {103, 203, 303, 403}:
-                condition.append('congruent')
-            elif new_evs[event, 2] in {104, 204, 304, 404}:
+            elif new_evs[event, 2] % 2 == 0:
                 condition.append('incongruent')
             miss.append(trial)
             reaction.append(np.nan)
@@ -228,14 +212,10 @@ for event in range(len(new_evs[:, 2])):
         # -- if event is a word but no reaction followed
         elif new_evs[event + 1, 2] not in {1, 2, 3, 4}:
 
-            # store condition information and reaction as missing
-            if new_evs[event, 2] in {101, 201, 301, 401}:
+            # store condition information
+            if new_evs[event, 2] % 2:
                 condition.append('congruent')
-            elif new_evs[event, 2] in {102, 202, 302, 402}:
-                condition.append('incongruent')
-            elif new_evs[event, 2] in {103, 203, 303, 403}:
-                condition.append('congruent')
-            elif new_evs[event, 2] in {104, 204, 304, 404}:
+            elif new_evs[event, 2] % 2 == 0:
                 condition.append('incongruent')
             miss.append(trial)
             reaction.append(np.nan)
@@ -250,33 +230,30 @@ for event in range(len(new_evs[:, 2])):
 
             # add condition info
             col = str(new_evs[event, 2])[0]
-            cond = str(new_evs[event, 2])[-1]
-            if cond == '1':
+            # cond = str(new_evs[event, 2])[-1]
+            # store condition information
+            if new_evs[event, 2] % 2:
                 condition.append('congruent')
-            elif cond == '2':
-                condition.append('incongruent')
-            elif cond == '3':
-                condition.append('congruent')
-            elif cond == '4':
+            elif new_evs[event, 2] % 2 == 0:
                 condition.append('incongruent')
 
             # --- if color green ---
-            if new_evs[event, 2] in {101, 102, 103, 104}:
+            if col == '1':
                 # add color and condition
                 color.append('green')
 
             # --- if color red ---
-            elif new_evs[event, 2] in {201, 202, 203, 204}:
+            elif col == '2':
                 # add color and condition
                 color.append('red')
 
             # --- if color yellow ---
-            elif new_evs[event, 2] in {301, 302, 303, 304}:
+            elif col == '3':
                 # add color and condition
                 color.append('yellow')
 
             # --- if color blue ---
-            elif new_evs[event, 2] in {401, 402, 403, 404}:
+            elif col == '4':
                 # add color and condition
                 color.append('blue')
 
@@ -346,7 +323,7 @@ elif task == 'mixedstroop':
                        'incorrect green congruent': 2103,
                        'incorrect green incongruent': 2104,
 
-                       'incorrect red congruent': 2204,
+                       'incorrect red congruent': 2203,
                        'incorrect red incongruent': 2204,
 
                        'incorrect yellow congruent': 2303,
