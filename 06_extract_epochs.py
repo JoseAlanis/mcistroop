@@ -390,13 +390,13 @@ metadata = {'trial': good_trials,
 metadata = pd.DataFrame(metadata)
 
 # # save RT measures for later analyses
-# rt_data = metadata.copy()
-# rt_data = rt_data.assign(subject=subject)
-#
-# # save to disk
-# rt_data.to_csv(op.join(fname.rt, 'sub-%s-rt.tsv' % subject),
-#                sep='\t',
-#                index=False)
+rt_data = metadata.copy()
+rt_data = rt_data.assign(subject=subject)
+
+# save to disk
+rt_data.to_csv(os.path.join(fname.rt, 'sub-%s_%s_rt.tsv' % (subject, task)),
+               sep='\t',
+               index=False)
 
 ###############################################################################
 # 6) Extract the epochs
