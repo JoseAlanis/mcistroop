@@ -192,6 +192,7 @@ topomap_args = dict(sensors=False,
                     average=0.05,
                     extrapolate='head',
                     outlines='head')
+ttp = [0.10, 0.2, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
 
 control_diff_block = combine_evoked(
     [control_incongruent_sep, -control_congruent_sep],
@@ -221,11 +222,22 @@ mci_diff_mix.plot_joint(times=ttp, ts_args=ts_args,
                         topomap_args=topomap_args,
                         title='MCI Mixed Effect')
 
-evokeds_congruent = {'Control Congruent': control_congruent_sep.copy().crop(tmin=-0.25),
-                     'MCI Congruent': mci_congruent_sep.copy().crop(tmin=-0.25)}
+evokeds_mci = {'MCI Congruent': mci_congruent_sep.copy().crop(tmin=-0.25),
+               'MCI Incongruent': mci_incongruent_sep.copy().crop(tmin=-0.25)}
+
+evokeds_control = {'Control Congruent': control_congruent_sep.copy().crop(
+    tmin=-0.25),
+               'Control Incongruent': control_incongruent_sep.copy().crop(tmin=-0.25)}
 
 evokeds_incongruent = {'Control Incongruent': control_incongruent_sep.copy().crop(tmin=-0.25),
                        'MCI Incongruent': mci_incongruent_sep.copy().crop(tmin=-0.25)}
+
+evokeds= {'Control Congruent': control_congruent_sep.copy().crop(tmin=-0.25),
+          'Control Incongruent': control_incongruent_sep.copy().crop(
+              tmin=-0.25),
+          'MCI Congruent': mci_congruent_sep.copy().crop(tmin=-0.25),
+          'MCI Incongruent': mci_incongruent_sep.copy().crop(tmin=-0.25)}
+
 
 evokeds_diff = {'Diff Control': control_diff_block.copy().crop(tmin=-0.25),
                 'Diff Mci': mci_diff_block.copy().crop(tmin=-0.25)}
@@ -233,15 +245,132 @@ evokeds_diff = {'Diff Control': control_diff_block.copy().crop(tmin=-0.25),
 # evokeds_diff = {'Diff Control': control_diff_mix.copy().crop(tmin=-0.25),
 #                 'Diff Mci': mci_diff_mix.copy().crop(tmin=-0.25)}
 
-plot_compare_evokeds(evokeds=evokeds_diff,
-                     picks=['AFF1h'],
+plot_compare_evokeds(evokeds=evokeds_control,
+                     picks=['FCC3h'],
                      ylim=dict(eeg=[-5, 5])
                      )
+fig, ax = plt.subplots(figsize=(6, 4))
+plot_compare_evokeds(evokeds=evokeds,
+                     picks=['FFC1h'],
+                     ylim=dict(eeg=[-7, 7]),
+                     legend='lower right',
+                     axes=ax)
+fig.savefig(fname.figures + '/FFC1h_erps_group.pdf', dpi=300)
 
-plot_compare_evokeds(evokeds=evokeds_incongruent,
-                     picks=['AFF1h'],
-                     ylim=dict(eeg=[-10, 10])
-                     )
+
+#
+# ###############################################################################
+control_erps = [val for val in Control_erps_cong.values()]
+control_erps.extend([val for val in Control_erps_incong.values()])
+control_erps = grand_average(control_erps)
+
+mci_erps = [val for val in MCI_erps_cong.values()]
+mci_erps.extend([val for val in MCI_erps_incong.values()])
+mci_erps = grand_average(mci_erps)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+plot_compare_evokeds(evokeds={'Control': control_erps.copy().crop(tmin=-0.25),
+                              'MCI': mci_erps.copy().crop(tmin=-0.25)},
+                     picks=['Pz'],
+                     ylim=dict(eeg=[-7, 7]),
+                     legend='lower right',
+                     axes=ax)
+fig.savefig(fname.figures + '/Pz_overall_erps_group.pdf', dpi=300)
+
+
+# number of random samples
+boot = 1000
+
+# set random state for replication
+random_state = 42
+random = np.random.RandomState(random_state)
+
+bood_diff = np.zeros((boot, 34, 282))
+
+# run bootstrap for regression coefficients
+for i in range(boot):
+
+    # *** 2.1) create bootstrap sample ***
+    # extract random subjects from overall sample
+    control_subjs = [key for key in Control_erps_incong.keys()]
+    resampled_control_subjects = random.choice(control_subjs,
+                                               len(control_subjs),
+                                               replace=True)
+
+    mci_subjs = [key for key in MCI_erps_incong.keys()]
+    resampled_mci_subjects = random.choice(mci_subjs,
+                                           len(mci_subjs),
+                                           replace=True)
+
+    boot_control = [Control_erps_incong[key].copy().crop(tmin=-0.25)
+                    for key in resampled_control_subjects]
+    boot_mci = [MCI_erps_incong[key].copy().crop(tmin=-0.25)
+                for key in resampled_mci_subjects]
+
+    boot_control = grand_average(boot_control)
+    boot_mci = grand_average(boot_mci)
+
+    diff = combine_evoked([boot_control, -boot_mci], weights='equal')
+
+    bood_diff[i, ... ] = diff.data
+
+
+n_boot = bood_diff.shape[0]
+a = (0.05 * n_boot) / (2 * 1)
+# c = number of bootstraps - a
+c = n_boot - a
+
+ix = diff_incongruent.ch_names.index('P8')
+# compute low and high percentiles for bootstrapped beta coefficients
+lower_b, upper_b = np.quantile(bood_diff[:, ix, :], [(a+1)/n_boot, c/n_boot],
+                               axis=0)
+
+
+diff_incongruent = combine_evoked(
+    [control_incongruent_sep, -mci_incongruent_sep],
+    weights='equal')
+
+# create figure
+fig, ax = plt.subplots(figsize=(6, 4))
+ax = plot_compare_evokeds({'Effect of Group on Incongruent':
+                               diff_incongruent.copy().crop(tmin=-0.25)},
+                          legend='lower right',
+                          ylim=dict(eeg=[-3, 3]),
+                          picks='P8',
+                          show_sensors='upper right',
+                          axes=ax,
+                          colors=['k'],
+                          show=False)
+ax[0].axes[0].fill_between(diff_incongruent.copy().crop(tmin=-0.25).times,
+                           # transform values to microvolt
+                           upper_b * 1e6,
+                           lower_b * 1e6,
+                           alpha=0.2,
+                           color='k')
+ax[0].axes[0].set_ylabel(r'$\beta$ ($\mu$V)')
+ax[0].axes[0].axhline(y=0, xmin=-.5, xmax=2.5,
+                      color='black', linestyle='dashed', linewidth=.8)
+ax[0].axes[0].spines['top'].set_visible(False)
+ax[0].axes[0].spines['right'].set_visible(False)
+ax[0].axes[0].spines['left'].set_bounds(-3.0, 3.0)
+ax[0].axes[0].spines['bottom'].set_bounds(-.25, 2.0)
+ax[0].axes[0].set_xticks(list(np.arange(-.25, 2.05, .25)), minor=False)
+ax[0].axes[0].set_xticklabels(list(np.arange(-250, 2050, 250)))
+ax[0].axes[0].set_xlabel('Time (ms)')
+fig.savefig(fname.figures + '/P8_incongruent_diff.pdf', dpi=300)
+
+
+
+
+
+plot_compare_evokeds(evokeds={'Control': control_erps.copy().crop(tmin=-0.25),
+                              'MCI': mci_erps.copy().crop(tmin=-0.25)},
+                     picks=['Pz'],
+                     ylim=dict(eeg=[-7, 7]),
+                     legend='lower right',
+                     axes=ax)
+fig.savefig(fname.figures + '/Pz_overall_erps_group.pdf', dpi=300)
+
 
 
 #

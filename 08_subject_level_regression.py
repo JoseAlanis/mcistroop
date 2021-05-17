@@ -92,6 +92,8 @@ n_channels = len(epochs_info['ch_names'])
 
 # subjects
 subjects = list(block_stroop.keys())
+analysed_subjects = np.asarray([key for key in block_stroop.keys()])
+np.save(fname.results + '/analysed_subjects.npy', analysed_subjects)
 
 # independent variables to be used in the analysis (i.e., predictors)
 predictors = ['condition']
